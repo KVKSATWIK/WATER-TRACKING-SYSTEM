@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="grid md:grid-cols-2 gap-6">
+  <!-- Today's Progress -->
+  <div class="bg-slate-900 rounded-2xl p-6 shadow-xl">
+    <h2 class="text-lg font-semibold mb-4">Today's Progress</h2>
+    <div class="flex items-center gap-6">
+      
+      <!-- Bottle -->
+      <div class="bottle relative w-28 h-56 rounded-3xl overflow-hidden border border-slate-700">
+        <div id="bottle-fill" class="absolute bottom-0 left-0 w-full bg-blue-500 transition-all duration-500" style="height: {{ pct }}%"></div>
+        <div class="absolute inset-0 pointer-events-none bottle-gloss"></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="space-y-2">
+        <p class="text-3xl font-bold"><span id="today-total">{{ today_total }}</span> ml</p>
+        <p class="text-sm text-slate-400">Goal: <span id="goal">{{ user.daily_goal_ml }}</span> ml</p>
+        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+          <div id="progress-bar" class="h-3 rounded-full bg-blue-500 transition-all duration-500" style="width: {{ pct }}%"></div>
+        </div>
+        <p class="text-sm">Progress: <span id="progress-pct">{{ pct }}</span>%</p>
+        <p class="text-sm">Streak: <span id="streak">{{ streak }}</span> day(s)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Log -->
+  <div class="bg-slate-900 rounded-2xl p-6 shadow-xl">
+    <h2 class="text-lg font-semibold mb-4">Quick Log</h2>
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button class="log-btn btn" data-ml="250">+250 ml</button>
+      <button class="log-btn btn" data-ml="500">+500 ml</button>
+      <button class="log-btn btn" data-ml="750">+750 ml</button>
+      <button class="log-btn btn" data-ml="1000">+1000 ml</button>
+    </div>
+
+<!-- Custom Log -->
+<form method="post" action="/log" class="flex items-center gap-2">
+  <input 
+    type="number" 
+    min="50" max="2000" step="50" 
+    name="amount_ml" 
+    placeholder="Custom (ml)" 
+    class="input text-black bg-white rounded-lg px-2 py-1"
+  >
+  <button class="btn" type="submit">Add</button>
+</form>
+
+<!-- Goal Update -->
+<form method="post" action="/set-goal" class="flex items-center gap-2 mt-4">
+  <input 
+    id="goal-input" 
+    type="number" 
+    min="250" max="10000" step="50" 
+    name="daily_goal_ml" 
+    value="{{ user.daily_goal_ml }}" 
+    class="input text-black bg-white rounded-lg px-2 py-1"
+  >
+  <button class="btn" type="submit">Update Goal</button>
+</form>
+
+    <!-- Reset button -->
+    <div class="mt-6">
+      <button onclick="resetDay()" class="btn bg-red-500 hover:bg-red-600">Reset Today</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- Script -->
+<script>
+let currentWater = {{ today_total|default(0) }};
+const dailyGoal = {{ user.daily_goal_ml }};
+
+function updateWaterLevel() {
+  const percentage = (currentWater / dailyGoal) * 100;
+
+  document.getElementById("bottle-fill").style.height = percentage + "%";
+  document.getElementById("today-total").textContent = currentWater + " ml";
+  document.getElementById("progress-bar").style.width = percentage + "%";
+  document.getElementById("progress-pct").textContent = percentage.toFixed(1);
+}
+
+// Attach to Quick Log buttons
+document.querySelectorAll(".log-btn").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    const ml = parseInt(btn.dataset.ml);
+    currentWater += ml;
+    if (currentWater > dailyGoal) currentWater = dailyGoal;
+    updateWaterLevel();
+  });
+});
+
+// Reset function (fixes everything)
+async function resetDay() {
+    try {
+        const res = await fetch("/api/reset", {method: "POST"});
+        const data = await res.json();
+        if (data.ok) {
+            currentWater = 0;
+            document.getElementById("today-total").innerText = "0 ml";
+            document.getElementById("bottle-fill").style.height = "0%";
+            document.getElementById("progress-bar").style.width = "0%";
+            document.getElementById("progress-pct").innerText = "0";
+            document.getElementById("streak").innerText = data.streak + " day(s)";
+            alert("Water intake reset for today!");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Error resetting progress");
+    }
+}
+</script>
+
+{% endblock %}

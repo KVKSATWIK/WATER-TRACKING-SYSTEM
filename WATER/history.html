@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="bg-slate-900 rounded-2xl p-6 shadow-xl">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">Last {{ days }} Days</h2>
+    <div class="space-x-2">
+      <a href="/history?days=7" class="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700">7d</a>
+      <a href="/history?days=14" class="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700">14d</a>
+      <a href="/history?days=30" class="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700">30d</a>
+    </div>
+  </div>
+  <canvas id="historyChart" height="120"></canvas>
+</section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const ctx = document.getElementById("historyChart");
+    const labels = {{ labels|tojson }};
+    const values = {{ values|tojson }};
+    const goal = {{ goal|tojson }};
+
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "Intake (ml)", data: values },
+          { label: "Goal (ml)", data: Array(values.length).fill(goal), type: "line", pointRadius: 0, borderWidth: 2 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true } },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}
